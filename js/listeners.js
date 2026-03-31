@@ -1290,45 +1290,77 @@ autoSendSlider.addEventListener('change', () => {
         });
     }
 
-    // ── Dice buttons ──────────────────────────────────────────────────────────
-    function _rollDice(sides) {
-        const result = Math.floor(Math.random() * sides) + 1;
-        const formats = [
-            `🎲 ${result}`,
-            `${result}!`,
-            `d${sides}: ${result} ✨`,
-            `rolled a ${result}~`,
-            `${result} 🎲`,
-        ];
-        const text = formats[Math.floor(Math.random() * formats.length)];
-        hideModal(DOMElements.advancedModal.modal);
-        const delay = (settings.replyDelayMin || 1000) + Math.random() * ((settings.replyDelayMax || 3000) - (settings.replyDelayMin || 1000));
-        setTimeout(() => {
-            if (typeof addMessage === 'function') {
-                addMessage({
-                    id: Date.now(),
-                    sender: settings.partnerName || '对方',
-                    text,
-                    timestamp: new Date(),
-                    status: 'received',
-                    favorited: false,
-                    note: null,
-                    type: 'normal',
-                });
-                if (typeof playSound === 'function') playSound('message');
-                if (typeof window._sendPartnerNotification === 'function') {
-                    window._sendPartnerNotification(settings.partnerName || '对方', text);
-                }
-            }
-        }, delay);
+    // ── Dice modal ────────────────────────────────────────────────────────────
+    const diceFunctionBtn = document.getElementById('dice-function');
+    if (diceFunctionBtn) {
+        diceFunctionBtn.addEventListener('click', () => {
+            hideModal(DOMElements.advancedModal.modal);
+            // reset state
+            document.getElementById('dice-result-area').style.display = 'none';
+            document.getElementById('dice-result-number').textContent = '—';
+            document.getElementById('dice-result-label').textContent = '';
+            document.getElementById('send-dice-result').style.display = 'none';
+            showModal(document.getElementById('dice-modal'));
+        });
     }
 
-    const diceD38Btn = document.getElementById('dice-d38-function');
-    if (diceD38Btn) diceD38Btn.addEventListener('click', () => _rollDice(38));
+    let _diceLastResult = null;
+    let _diceLastSides = null;
 
-    const diceD78Btn = document.getElementById('dice-d78-function');
-    if (diceD78Btn) diceD78Btn.addEventListener('click', () => _rollDice(78));
-    // ── End dice buttons ──────────────────────────────────────────────────────
+    function _rollAndShow(sides) {
+        const result = Math.floor(Math.random() * sides) + 1;
+        _diceLastResult = result;
+        _diceLastSides = sides;
+        document.getElementById('dice-result-number').textContent = result;
+        document.getElementById('dice-result-label').textContent = `d${sides} · 范围 1–${sides}`;
+        document.getElementById('dice-result-area').style.display = 'block';
+        document.getElementById('send-dice-result').style.display = '';
+    }
+
+    const diceD38Card = document.getElementById('dice-roll-d38');
+    if (diceD38Card) diceD38Card.addEventListener('click', () => _rollAndShow(38));
+
+    const diceD78Card = document.getElementById('dice-roll-d78');
+    if (diceD78Card) diceD78Card.addEventListener('click', () => _rollAndShow(78));
+
+    const closeDiceModal = document.getElementById('close-dice-modal');
+    if (closeDiceModal) closeDiceModal.addEventListener('click', () => hideModal(document.getElementById('dice-modal')));
+
+    const sendDiceResult = document.getElementById('send-dice-result');
+    if (sendDiceResult) {
+        sendDiceResult.addEventListener('click', () => {
+            if (_diceLastResult === null) return;
+            const formats = [
+                `🎲 ${_diceLastResult}`,
+                `${_diceLastResult}!`,
+                `d${_diceLastSides}: ${_diceLastResult} ✨`,
+                `rolled a ${_diceLastResult}~`,
+                `${_diceLastResult} 🎲`,
+            ];
+            const text = formats[Math.floor(Math.random() * formats.length)];
+            hideModal(document.getElementById('dice-modal'));
+            const delay = (settings.replyDelayMin || 1000) + Math.random() * ((settings.replyDelayMax || 3000) - (settings.replyDelayMin || 1000));
+            setTimeout(() => {
+                if (typeof addMessage === 'function') {
+                    addMessage({
+                        id: Date.now(),
+                        sender: settings.partnerName || '对方',
+                        text,
+                        timestamp: new Date(),
+                        status: 'received',
+                        favorited: false,
+                        note: null,
+                        type: 'normal',
+                    });
+                    if (typeof playSound === 'function') playSound('message');
+                    if (typeof window._sendPartnerNotification === 'function') {
+                        window._sendPartnerNotification(settings.partnerName || '对方', text);
+                    }
+                }
+            }, delay);
+        });
+    }
+    // ── End dice modal ────────────────────────────────────────────────────────
     const galleryBanner = document.getElementById('gallery-banner-entry');
     if (galleryBanner) {
         galleryBanner.addEventListener('click', () => {

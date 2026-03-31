@@ -1370,11 +1370,8 @@
                     <div class="settings-item" id="envelope-function">
                         <i class="fas fa-envelope"></i><span>信封投递</span>
                     </div>
-                    <div class="settings-item" id="dice-d38-function">
-                        <i class="fas fa-dice"></i><span>🎲 d38 骰子</span>
-                    </div>
-                    <div class="settings-item" id="dice-d78-function">
-                        <i class="fas fa-dice"></i><span>🎲 d78 骰子</span>
+                    <div class="settings-item" id="dice-function">
+                        <i class="fas fa-dice"></i><span>骰子</span>
                     </div>
                 </div>
             </div>
@@ -2209,5 +2206,34 @@
     <script src="js/onboarding.js"></script> 
     <script src="js/listeners.js"></script>
     <script src="js/app.js"></script>
+    <!-- Dice Modal -->
+    <div class="modal" id="dice-modal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <i class="fas fa-dice"></i><span>骰子</span>
+            </div>
+            <div class="decision-menu-grid">
+                <div class="decision-option-card" id="dice-roll-d38">
+                    <i class="fas fa-dice"></i>
+                    <h3>d38</h3>
+                    <p>1 – 38</p>
+                </div>
+                <div class="decision-option-card" id="dice-roll-d78">
+                    <i class="fas fa-dice"></i>
+                    <h3>d78</h3>
+                    <p>1 – 78</p>
+                </div>
+            </div>
+            <div id="dice-result-area" style="display:none; text-align:center; padding: 16px 0 8px;">
+                <div id="dice-result-number" style="font-size:64px; font-weight:700; color:var(--accent-color); line-height:1;">—</div>
+                <div id="dice-result-label" style="font-size:13px; color:var(--text-secondary); margin-top:6px;"></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" id="close-dice-modal">关闭</button>
+                <button class="modal-btn modal-btn-primary" id="send-dice-result" style="display:none;">发送结果</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

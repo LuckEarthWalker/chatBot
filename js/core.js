@@ -1493,6 +1493,68 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
     }
 }
 
+            // ── Random number intercept ──────────────────────────────────────
+            // If the user asked for a random number, reply with it and skip
+            // the normal reply pool entirely.
+            const _rngResult = (function() {
+                const _lastMsg = (function() {
+                    for (let _i = (messages || []).length - 1; _i >= 0; _i--) {
+                        if (messages[_i].sender === 'user' && messages[_i].text) return messages[_i].text;
+                    }
+                    return '';
+                })();
+                if (!_lastMsg) return null;
+                // Match patterns like:
+                //   pick/choose/give me a (random) number between X and Y
+                //   random number from X to Y
+                //   number between X and Y
+                //   X-Y  (standalone, e.g. "random number 1-50")
+                const _pattern = /(?:pick|choose|give me|select|get|generate)?[\s\S]{0,30}?(?:random\s+)?number[\s\S]{0,20}?(?:between|from|ranging from)?\s*(-?\d+(?:\.\d+)?)\s*(?:and|to|-)\s*(-?\d+(?:\.\d+)?)/i;
+                const _m = _lastMsg.match(_pattern);
+                if (!_m) return null;
+                let _lo = parseFloat(_m[1]);
+                let _hi = parseFloat(_m[2]);
+                if (isNaN(_lo) || isNaN(_hi)) return null;
+                if (_lo > _hi) { const _tmp = _lo; _lo = _hi; _hi = _tmp; } // swap if reversed
+                // Keep integers if both bounds are integers
+                const _isInt = Number.isInteger(parseFloat(_m[1])) && Number.isInteger(parseFloat(_m[2]));
+                const _result = _isInt
+                    ? Math.floor(Math.random() * (_hi - _lo + 1)) + _lo
+                    : (Math.random() * (_hi - _lo) + _lo).toFixed(2);
+                return _result;
+            })();
+
+            if (_rngResult !== null) {
+                const _delay = settings.replyDelayMin + Math.random() * (settings.replyDelayMax - settings.replyDelayMin);
+                setTimeout(() => {
+                    const _replies = [
+                        `🎲 ${_rngResult}`,
+                        `${_rngResult}!`,
+                        `Hmm... ${_rngResult} 🎲`,
+                        `I pick ${_rngResult}~`,
+                        `${_rngResult} ✨`,
+                    ];
+                    const _text = _replies[Math.floor(Math.random() * _replies.length)];
+                    addMessage({
+                        id: Date.now(),
+                        sender: settings.partnerName || '对方',
+                        text: _text,
+                        timestamp: new Date(),
+                        status: 'received',
+                        favorited: false,
+                        note: null,
+                        type: 'normal'
+                    });
+                    if (typeof playSound === 'function') playSound('message');
+                    if (typeof window._sendPartnerNotification === 'function') {
+                        window._sendPartnerNotification(settings.partnerName || '对方', _text);
+                    }
+                    (function(){try{if(window._typingIndicatorAutoHideTimer){clearTimeout(window._typingIndicatorAutoHideTimer);window._typingIndicatorAutoHideTimer=null;}}catch(e){}var _tiW=document.getElementById('typing-indicator-wrapper');if(_tiW){var _tiInner=_tiW.querySelector('.typing-indicator');if(_tiInner){_tiInner.classList.add('hiding');setTimeout(function(){_tiW.style.display='none';if(_tiInner)_tiInner.classList.remove('hiding');},240);}else{_tiW.style.display='none';}}})();
+                }, _delay);
+                return;
+            }
+            // ── End random number intercept ──────────────────────────────────
+
             const replyCount = Math.random() < 0.75 ? 1: (Math.random() < 0.95 ? 2: 3);
             if (!customReplies || customReplies.length === 0) {
                 (function(){try{if(window._typingIndicatorAutoHideTimer){clearTimeout(window._typingIndicatorAutoHideTimer);window._typingIndicatorAutoHideTimer=null;}}catch(e){}var _tiW=document.getElementById('typing-indicator-wrapper');if(_tiW){var _tiInner=_tiW.querySelector('.typing-indicator');if(_tiInner){_tiInner.classList.add('hiding');setTimeout(function(){_tiW.style.display='none';if(_tiInner)_tiInner.classList.remove('hiding');},240);}else{_tiW.style.display='none';}}})();

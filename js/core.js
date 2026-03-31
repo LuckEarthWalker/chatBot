@@ -1536,7 +1536,8 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                         return '';
                     })();
                     let replyText = '';
-                    if (window.SmartReply) {
+                    const _smartReplyEnabled = localStorage.getItem('smartReplyEnabled') !== 'false';
+                    if (window.SmartReply && _smartReplyEnabled) {
                         const _picked = window.SmartReply.pick(replyPool, _lastUserMsg);
                         if (_picked) replyText = String(_picked).trim();
                     }

@@ -1290,6 +1290,21 @@ autoSendSlider.addEventListener('change', () => {
         });
     }
 
+            // ── Smart reply toggle ─────────────────────────────────────────────────────
+            const smartReplyToggle = document.getElementById('smart-reply-toggle');
+            if (smartReplyToggle) {
+                // Initialise from localStorage
+                const smartReplyEnabled = localStorage.getItem('smartReplyEnabled') !== 'false';
+                smartReplyToggle.classList.toggle('active', smartReplyEnabled);
+                smartReplyToggle.addEventListener('click', () => {
+                    const nowEnabled = !smartReplyToggle.classList.contains('active');
+                    smartReplyToggle.classList.toggle('active', nowEnabled);
+                    localStorage.setItem('smartReplyEnabled', nowEnabled ? 'true' : 'false');
+                    showNotification(nowEnabled ? '智能回复匹配已开启' : '智能回复匹配已关闭', 'info');
+                });
+            }
+            // ── End smart reply toggle ─────────────────────────────────────────────────
+
             // ── Dice modal ────────────────────────────────────────────────────────────
             const diceFunctionBtn = document.getElementById('dice-function');
             if (diceFunctionBtn) {

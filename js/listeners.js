@@ -1289,6 +1289,46 @@ autoSendSlider.addEventListener('change', () => {
             showModal(document.getElementById('envelope-modal'));
         });
     }
+
+    // ── Dice buttons ──────────────────────────────────────────────────────────
+    function _rollDice(sides) {
+        const result = Math.floor(Math.random() * sides) + 1;
+        const formats = [
+            `🎲 ${result}`,
+            `${result}!`,
+            `d${sides}: ${result} ✨`,
+            `rolled a ${result}~`,
+            `${result} 🎲`,
+        ];
+        const text = formats[Math.floor(Math.random() * formats.length)];
+        hideModal(DOMElements.advancedModal.modal);
+        const delay = (settings.replyDelayMin || 1000) + Math.random() * ((settings.replyDelayMax || 3000) - (settings.replyDelayMin || 1000));
+        setTimeout(() => {
+            if (typeof addMessage === 'function') {
+                addMessage({
+                    id: Date.now(),
+                    sender: settings.partnerName || '对方',
+                    text,
+                    timestamp: new Date(),
+                    status: 'received',
+                    favorited: false,
+                    note: null,
+                    type: 'normal',
+                });
+                if (typeof playSound === 'function') playSound('message');
+                if (typeof window._sendPartnerNotification === 'function') {
+                    window._sendPartnerNotification(settings.partnerName || '对方', text);
+                }
+            }
+        }, delay);
+    }
+
+    const diceD38Btn = document.getElementById('dice-d38-function');
+    if (diceD38Btn) diceD38Btn.addEventListener('click', () => _rollDice(38));
+
+    const diceD78Btn = document.getElementById('dice-d78-function');
+    if (diceD78Btn) diceD78Btn.addEventListener('click', () => _rollDice(78));
+    // ── End dice buttons ──────────────────────────────────────────────────────
     const galleryBanner = document.getElementById('gallery-banner-entry');
     if (galleryBanner) {
         galleryBanner.addEventListener('click', () => {

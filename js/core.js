@@ -1527,13 +1527,27 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                 delay += settings.replyDelayMin + Math.random() * delayRange;
                 setTimeout(() => {
                     const replyPool = replyPoolOnce;
-                    // 被屏蔽或无效项直接换下一个，尽量保证每次都产出可用回复
+                    // Smart pick: keyword + sentiment aware, falls back to random
+                    const _lastUserMsg = (function() {
+                        const msgs = messages || [];
+                        for (let _i = msgs.length - 1; _i >= 0; _i--) {
+                            if (msgs[_i].sender === 'user' && msgs[_i].text) return msgs[_i].text;
+                        }
+                        return '';
+                    })();
                     let replyText = '';
-                    for (let t = 0; t < 6; t++) {
-                        const picked = replyPool[Math.floor(Math.random() * replyPool.length)];
-                        if (picked && String(picked).trim()) {
-                            replyText = String(picked).trim();
-                            break;
+                    if (window.SmartReply) {
+                        const _picked = window.SmartReply.pick(replyPool, _lastUserMsg);
+                        if (_picked) replyText = String(_picked).trim();
+                    }
+                    // Fallback: original random loop if SmartReply unavailable or returned nothing
+                    if (!replyText) {
+                        for (let t = 0; t < 6; t++) {
+                            const picked = replyPool[Math.floor(Math.random() * replyPool.length)];
+                            if (picked && String(picked).trim()) {
+                                replyText = String(picked).trim();
+                                break;
+                            }
                         }
                     }
                     if (!replyText && i === replyCount - 1) {
@@ -2006,4 +2020,3 @@ async function initializeSession() {
 
     await localforage.setItem(`${APP_PREFIX}lastSessionId`, SESSION_ID);
 }
-

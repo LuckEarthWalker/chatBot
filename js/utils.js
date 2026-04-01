@@ -1,4 +1,4 @@
-        function safeGetItem(key) {
+function safeGetItem(key) {
             try { return localStorage.getItem(key); }
             catch (e) { console.error('Error getting item:', e); return null; }
         }
@@ -364,7 +364,10 @@ async function importAllData(file) {
             let raw = e.target.result;
             if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
             const data = JSON.parse(raw);
-            if (data.type !== 'full') {
+            const isFullBackup = data.type === 'full' || 
+                                 (typeof data.version === 'string' && data.version.includes('full')) ||
+                                 (data.indexedDB && data.localStorage);
+            if (!isFullBackup) {
                 if (typeof importChatHistory === 'function') importChatHistory(file);
                 return;
             }
@@ -453,6 +456,29 @@ async function importAllData(file) {
 
             const matchAnyNeedles = (key, needles) => needles.some(n => key && key.includes(n));
 
+            // Detect the old session ID from exported keys so we can remap them
+            // to the current session. Keys look like: CHAT_APP_V3_{sessionId}_{baseKey}
+            const _appPrefix = (typeof APP_PREFIX !== 'undefined') ? APP_PREFIX : 'CHAT_APP_V3_';
+            let _oldSessionId = null;
+            for (const k of Object.keys(data.indexedDB || {})) {
+                if (k.startsWith(_appPrefix)) {
+                    const withoutPrefix = k.slice(_appPrefix.length);
+                    const underscoreIdx = withoutPrefix.indexOf('_');
+                    if (underscoreIdx > 0) {
+                        _oldSessionId = withoutPrefix.slice(0, underscoreIdx);
+                        break;
+                    }
+                }
+            }
+
+            const _remapKey = (k) => {
+                if (!_oldSessionId || !SESSION_ID || _oldSessionId === SESSION_ID) return k;
+                const oldPrefix = _appPrefix + _oldSessionId + '_';
+                const newPrefix = _appPrefix + SESSION_ID + '_';
+                if (k.startsWith(oldPrefix)) return newPrefix + k.slice(oldPrefix.length);
+                return k;
+            };
+
             showNotification('正在恢复数据…', 'info', 3000);
 
             const indexedDB = data.indexedDB || {};
@@ -464,7 +490,7 @@ async function importAllData(file) {
                 for (const [k, v] of Object.entries(indexedDB)) {
                     const ok = selectedCategories.some(c => matchAnyNeedles(k, c.indexedDBNeedles));
                     if (!ok) continue;
-                    try { await localforage.setItem(k, v); } catch (err) {}
+                    try { await localforage.setItem(_remapKey(k), v); } catch (err) {}
                 }
             }
 
@@ -472,7 +498,7 @@ async function importAllData(file) {
                 for (const [k, v] of Object.entries(localStorageData)) {
                     const ok = selectedCategories.some(c => matchAnyNeedles(k, c.localStorageNeedles));
                     if (!ok) continue;
-                    try { localStorage.setItem(k, v); } catch (err) {}
+                    try { localStorage.setItem(_remapKey(k), v); } catch (err) {}
                 }
             }
 

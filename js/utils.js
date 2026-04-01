@@ -363,11 +363,21 @@ async function importAllData(file) {
         try {
             let raw = e.target.result;
             if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
-            const data = JSON.parse(raw);
-            const isFullBackup = data.type === 'full' || 
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch (parseErr) {
+                console.error('[importAllData] JSON.parse failed:', parseErr, '\nFirst 500 chars:', raw.slice(0, 500));
+                showNotification('文件损坏或格式不兼容（JSON解析失败）', 'error');
+                return;
+            }
+            console.log('[importAllData] parsed ok, type:', data.type, 'version:', data.version, 'keys:', Object.keys(data));
+            const isFullBackup = data.type === 'full' ||
                                  (typeof data.version === 'string' && data.version.includes('full')) ||
                                  (data.indexedDB && data.localStorage);
+            console.log('[importAllData] isFullBackup:', isFullBackup);
             if (!isFullBackup) {
+                console.log('[importAllData] not a full backup, delegating to importChatHistory');
                 if (typeof importChatHistory === 'function') importChatHistory(file);
                 return;
             }
@@ -505,8 +515,8 @@ async function importAllData(file) {
             showNotification('恢复完成，即将刷新页面…', 'success', 2000);
             setTimeout(() => location.reload(), 2200);
         } catch(e) {
-            console.error('全量导入失败:', e);
-            showNotification('文件损坏或格式不兼容', 'error');
+            console.error('[importAllData] 全量导入失败:', e);
+            showNotification('文件损坏或格式不兼容：' + e.message, 'error');
         }
     };
     reader.readAsText(file);

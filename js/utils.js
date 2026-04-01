@@ -451,14 +451,14 @@ async function importAllData(file) {
                     </div>
                 `;
                 overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); resolve(null); });
-                document.getElementById('full-imp-cancel').onclick = () => { overlay.remove(); resolve(null); };
-                document.getElementById('full-imp-confirm').onclick = () => {
+                document.body.appendChild(overlay);
+                overlay.querySelector('#full-imp-cancel').onclick = () => { overlay.remove(); resolve(null); };
+                overlay.querySelector('#full-imp-confirm').onclick = () => {
                     const selected = Array.from(overlay.querySelectorAll('input[type=checkbox]:checked'))
                         .map(i => i.dataset.cat);
                     overlay.remove();
                     resolve(selected);
                 };
-                document.body.appendChild(overlay);
             });
 
             const selectedCats = await pickSelected();

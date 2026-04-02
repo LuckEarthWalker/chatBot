@@ -1340,6 +1340,7 @@ autoSendSlider.addEventListener('change', () => {
             const closeDiceModal = document.getElementById('close-dice-modal');
             if (closeDiceModal) closeDiceModal.addEventListener('click', () => hideModal(document.getElementById('dice-modal')));
 
+            /*
             const sendDiceResult = document.getElementById('send-dice-result');
             if (sendDiceResult) {
                 sendDiceResult.addEventListener('click', () => {
@@ -1373,7 +1374,7 @@ autoSendSlider.addEventListener('change', () => {
                         }
                     }, delay);
                 });
-            }
+            } */
             // ── End dice modal ────────────────────────────────────────────────────────
 
     const galleryBanner = document.getElementById('gallery-banner-entry');

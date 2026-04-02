@@ -1313,7 +1313,7 @@ autoSendSlider.addEventListener('change', () => {
                     document.getElementById('dice-result-area').style.display = 'none';
                     document.getElementById('dice-result-number').textContent = '—';
                     document.getElementById('dice-result-label').textContent = '';
-                    document.getElementById('send-dice-result').style.display = 'none';
+                    // document.getElementById('send-dice-result').style.display = 'none';
                     showModal(document.getElementById('dice-modal'));
                 });
             }
@@ -1328,7 +1328,7 @@ autoSendSlider.addEventListener('change', () => {
                 document.getElementById('dice-result-number').textContent = result;
                 document.getElementById('dice-result-label').textContent = `d${sides} · 范围 1–${sides}`;
                 document.getElementById('dice-result-area').style.display = 'block';
-                document.getElementById('send-dice-result').style.display = '';
+                // document.getElementById('send-dice-result').style.display = '';
             }
 
             const diceD38Card = document.getElementById('dice-roll-d38');

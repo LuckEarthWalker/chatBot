@@ -1294,7 +1294,7 @@ autoSendSlider.addEventListener('change', () => {
             const smartReplyToggle = document.getElementById('smart-reply-toggle');
             if (smartReplyToggle) {
                 // Initialise from localStorage
-                const smartReplyEnabled = localStorage.getItem('smartReplyEnabled') !== 'false';
+                const smartReplyEnabled = localStorage.getItem('smartReplyEnabled') === 'true';
                 smartReplyToggle.classList.toggle('active', smartReplyEnabled);
                 smartReplyToggle.addEventListener('click', () => {
                     const nowEnabled = !smartReplyToggle.classList.contains('active');

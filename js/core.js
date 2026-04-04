@@ -1526,8 +1526,6 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                 const delayRange = settings.replyDelayMax - settings.replyDelayMin;
                 delay += settings.replyDelayMin + Math.random() * delayRange;
                 setTimeout(() => {
-                    const replyPool = replyPoolOnce;
-                    // Smart pick: keyword + sentiment aware, falls back to random
                     const _lastUserMsg = (function() {
                         const msgs = messages || [];
                         for (let _i = msgs.length - 1; _i >= 0; _i--) {
@@ -1535,8 +1533,12 @@ if (partnerPersonas && partnerPersonas.length > 0 && Math.random() < 0.3) {
                         }
                         return '';
                     })();
+                    const replyPool = (window.ReplyCategories)
+                        ? window.ReplyCategories.pickPool(replyPoolOnce, _lastUserMsg)
+                        : replyPoolOnce;
+                    // Smart pick: keyword + sentiment aware, falls back to random
                     let replyText = '';
-                    const _smartReplyEnabled = localStorage.getItem('smartReplyEnabled') !== 'false';
+                    const _smartReplyEnabled = localStorage.getItem('smartReplyEnabled') === 'true';
                     if (window.SmartReply && _smartReplyEnabled) {
                         const _picked = window.SmartReply.pick(replyPool, _lastUserMsg);
                         if (_picked) replyText = String(_picked).trim();

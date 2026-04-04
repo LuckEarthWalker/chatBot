@@ -7,7 +7,8 @@ let _batchModeTarget = 'custom'; // 'custom' or 'stickers' (depends on currentSu
 let _searchVisible = false;
 let _searchQuery = '';
 let _searchDebounceTimer = null;
-let _activeGroupFilter = null; 
+let _activeGroupFilter = null;
+let _activeCategoryFilter = null; // null=all, "untagged", or a categoryId
 
 const GROUP_COLORS = [
     '#FF6B6B','#FF8E53','#FFC542','#51CF66',
@@ -89,6 +90,15 @@ const ICONS = {
         .rl-group-header.collapsed { border-radius:12px; }
         .rl-group-header:hover { background:rgba(var(--accent-color-rgb,180,140,100),0.06); }
         .rl-group-body { border:1px solid var(--border-color);border-top:none;border-radius:0 0 12px 12px;padding:6px 8px 8px;background:var(--primary-bg); }
+        .cat-pill-btn {
+            display:inline-flex;align-items:center;white-space:nowrap;
+            padding:5px 12px;border-radius:20px;border:1.5px solid var(--border-color);
+            background:var(--primary-bg);color:var(--text-secondary);
+            font-size:12px;cursor:pointer;font-family:var(--font-family);
+            transition:all 0.18s;flex-shrink:0;gap:2px;
+        }
+        .cat-pill-btn:hover { border-color:var(--accent-color);color:var(--accent-color); }
+        .cat-pill-btn.gfp-active { background:var(--accent-color);border-color:var(--accent-color);color:#fff; }
         .rl-group-tag {
             display:inline-flex;align-items:center;gap:5px;
             padding:2px 9px 2px 6px;border-radius:20px;
@@ -135,7 +145,16 @@ function _renderListContentOnly() {
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
 
     const q = _searchQuery.toLowerCase().trim();
-    const filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+    let filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+
+    if (currentMajorTab === 'reply' && currentSubTab === 'custom' && _activeCategoryFilter !== null && window.ReplyCategories) {
+        const _catMap = window.ReplyCategories.getMap();
+        if (_activeCategoryFilter === 'untagged') {
+            filtered = filtered.filter(r => !_catMap[r]);
+        } else {
+            filtered = filtered.filter(r => _catMap[r] === _activeCategoryFilter);
+        }
+    }
 
     if (filtered.length === 0) {
         const empty = document.createElement('div');
@@ -183,6 +202,7 @@ function renderReplyLibrary() {
                 _batchModeActive = false;
                 _batchSelectedIndices.clear();
                 _activeGroupFilter = null;
+                _activeCategoryFilter = null;
                 _searchVisible = false;
                 _searchQuery = '';
                 renderReplyLibrary();
@@ -223,6 +243,15 @@ function renderReplyLibrary() {
 
     const q = _searchQuery.toLowerCase().trim();
     let filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+
+    if (currentMajorTab === 'reply' && currentSubTab === 'custom' && _activeCategoryFilter !== null && window.ReplyCategories) {
+        const _catMap = window.ReplyCategories.getMap();
+        if (_activeCategoryFilter === 'untagged') {
+            filtered = filtered.filter(r => !_catMap[r]);
+        } else {
+            filtered = filtered.filter(r => _catMap[r] === _activeCategoryFilter);
+        }
+    }
 
     if (filtered.length === 0) {
         list.innerHTML = renderEmptyState(q ? `未找到"${q}"` : '列表空空如也');
@@ -407,6 +436,26 @@ function _renderModernToolbar() {
 
         ${groupFilterHtml}
 
+        ${(function() {
+            if (!isMainCustom || !window.ReplyCategories) return '';
+            var map = window.ReplyCategories.getMap();
+            var cats = window.ReplyCategories.CATEGORIES;
+            var totalCount = customReplies.length;
+            var untaggedCount = customReplies.filter(function(r){ return !map[r]; }).length;
+            var html = '<div id="category-filter-pills" style="display:flex;gap:6px;overflow-x:auto;padding:6px 15px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-shrink:0;">';
+            html += '<button class="cat-pill-btn' + (_activeCategoryFilter === null ? ' gfp-active' : '') + '" data-catfilter="all">全部 <span class="gfp-count">' + totalCount + '</span></button>';
+            html += '<button class="cat-pill-btn' + (_activeCategoryFilter === 'untagged' ? ' gfp-active' : '') + '" data-catfilter="untagged">未分类 <span class="gfp-count">' + untaggedCount + '</span></button>';
+            cats.forEach(function(cat) {
+                var cnt = customReplies.filter(function(r){ return map[r] === cat.id; }).length;
+                var isActive = _activeCategoryFilter === cat.id;
+                html += '<button class="cat-pill-btn' + (isActive ? ' gfp-active' : '') + '" data-catfilter="' + cat.id + '" style="' + (isActive ? 'background:' + cat.color + '22;border-color:' + cat.color + ';color:' + cat.color + ';' : '') + '">';
+                html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + cat.color + ';margin-right:4px;vertical-align:middle;"></span>';
+                html += cat.label + ' <span class="gfp-count">' + cnt + '</span></button>';
+            });
+            html += '</div>';
+            return html;
+        })()}
+
         ${batchActionsHtml}
     `;
 
@@ -463,6 +512,14 @@ function _renderModernToolbar() {
         btn.addEventListener('click', () => {
             const f = btn.dataset.filter;
             _activeGroupFilter = f === 'all' ? null : (f === 'ungrouped' ? 'ungrouped' : parseInt(f));
+            renderReplyLibrary();
+        });
+    });
+
+    toolbar.querySelectorAll('.cat-pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const f = btn.dataset.catfilter;
+            _activeCategoryFilter = (f === 'all') ? null : f;
             renderReplyLibrary();
         });
     });
@@ -696,15 +753,20 @@ function _createCard(item, index, disabledSet) {
         if (!customReplyGroups) return '';
         const g = customReplyGroups.find(grp => grp.items && grp.items.includes(item));
         if (!g) return '';
-        return `<span style="
-            display:inline-flex;align-items:center;gap:3px;
-            padding:1px 7px 1px 4px;border-radius:10px;font-size:10px;
-            background:${g.color}18;color:${g.color};border:1px solid ${g.color}30;
-            margin-top:5px;flex-shrink:0;
-        ">
-            <span style="width:5px;height:5px;border-radius:50%;background:${g.color};flex-shrink:0;"></span>
-            ${g.name}
-        </span>`;
+        return '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 4px;border-radius:10px;font-size:10px;background:' + g.color + '18;color:' + g.color + ';border:1px solid ' + g.color + '30;margin-top:4px;flex-shrink:0;">'
+            + '<span style="width:5px;height:5px;border-radius:50%;background:' + g.color + ';flex-shrink:0;"></span>'
+            + g.name + '</span>';
+    })();
+
+    const categoryBadge = (() => {
+        if (!window.ReplyCategories) return '';
+        const catId = window.ReplyCategories.getCategoryForReply(item);
+        if (!catId) return '';
+        const cat = window.ReplyCategories.CATEGORIES.find(c => c.id === catId);
+        if (!cat) return '';
+        return '<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 4px;border-radius:10px;font-size:10px;background:' + cat.color + '18;color:' + cat.color + ';border:1px solid ' + cat.color + '30;margin-top:4px;margin-left:3px;flex-shrink:0;">'
+            + '<span style="width:5px;height:5px;border-radius:50%;background:' + cat.color + ';flex-shrink:0;"></span>'
+            + cat.label + '</span>';
     })();
 
     const itemParts = item.split('|');
@@ -724,7 +786,7 @@ function _createCard(item, index, disabledSet) {
             </div>
             <div style="flex:1;min-width:0;${isDisabled ? 'opacity:0.4;' : ''}">
                 ${displayText}
-                ${groupBadge}
+                <div style="display:flex;flex-wrap:wrap;">${groupBadge}${categoryBadge}</div>
             </div>
         `;
         div.addEventListener('click', () => {
@@ -738,14 +800,17 @@ function _createCard(item, index, disabledSet) {
     div.innerHTML = `
         <div style="flex:1;min-width:0;${isDisabled ? 'opacity:0.4;text-decoration:line-through;' : ''}">
             ${displayText}
-            ${groupBadge}
+            <div style="display:flex;flex-wrap:wrap;">${groupBadge}${categoryBadge}</div>
         </div>
         <div class="rl-card-actions">
             <button class="rl-act-btn ${isDisabled ? 'active' : ''}" data-action="disable" title="${isDisabled ? '启用' : '屏蔽'}">
                 ${isDisabled ? ICONS.eye : ICONS.eyeOff}
             </button>
-            <button class="rl-act-btn" data-action="tag" title="分组">
+            <button class="rl-act-btn" data-action="category" title="设置分类">
                 ${ICONS.tag}
+            </button>
+            <button class="rl-act-btn" data-action="tag" title="分组">
+                ${ICONS.folder}
             </button>
             <button class="rl-act-btn" data-action="edit" title="编辑">
                 ${ICONS.edit}
@@ -760,6 +825,7 @@ function _createCard(item, index, disabledSet) {
     div.querySelector('[data-action="edit"]').onclick = (e) => { e.stopPropagation(); editItem(index, item); };
     div.querySelector('[data-action="disable"]').onclick = (e) => { e.stopPropagation(); _toggleItemDisable(item); };
     div.querySelector('[data-action="tag"]').onclick = (e) => { e.stopPropagation(); _showSingleItemGroupPicker(item); };
+    div.querySelector('[data-action="category"]').onclick = (e) => { e.stopPropagation(); _showCategoryPicker(item); };
 
     return div;
 }
@@ -1234,6 +1300,52 @@ function _showSingleItemGroupPicker(itemText) {
         overlay.remove();
         renderReplyLibrary();
         showNotification('✓ 分组已更新', 'success');
+    };
+}
+
+function _showCategoryPicker(itemText) {
+    if (!window.ReplyCategories) return;
+    const overlay = _makeOverlay();
+    const currentCatId = window.ReplyCategories.getCategoryForReply(itemText);
+    const cats = window.ReplyCategories.CATEGORIES;
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--secondary-bg);border-radius:22px;padding:22px;width:92%;max-width:340px;box-shadow:0 24px 80px rgba(0,0,0,.45);animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);';
+
+    let rows = '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:11px;border:1.5px solid ' + (!currentCatId ? 'var(--accent-color)' : 'var(--border-color)') + ';background:' + (!currentCatId ? 'rgba(var(--accent-color-rgb,180,140,100),0.06)' : 'var(--primary-bg)') + ';margin-bottom:7px;">'
+        + '<input type="radio" name="cp_radio" value="" ' + (!currentCatId ? 'checked' : '') + ' style="accent-color:var(--accent-color);">'
+        + '<span style="font-size:13px;color:var(--text-secondary);">未分类</span></label>';
+    cats.forEach(function(cat) {
+        const isActive = currentCatId === cat.id;
+        rows += '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:11px;border:1.5px solid ' + (isActive ? cat.color : 'var(--border-color)') + ';background:' + (isActive ? cat.color + '10' : 'var(--primary-bg)') + ';margin-bottom:7px;">'
+            + '<input type="radio" name="cp_radio" value="' + cat.id + '" ' + (isActive ? 'checked' : '') + ' style="accent-color:' + cat.color + ';">'
+            + '<span style="width:9px;height:9px;border-radius:50%;background:' + cat.color + ';flex-shrink:0;"></span>'
+            + '<span style="flex:1;font-size:13px;font-weight:600;color:var(--text-primary);">' + cat.label + '</span>'
+            + '<span style="font-size:10px;color:var(--text-secondary);">' + cat.keywords.slice(0,3).join('、') + '…</span>'
+            + '</label>';
+    });
+
+    panel.innerHTML = '<style>@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}</style>'
+        + '<div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:14px;">设置分类</div>'
+        + '<div style="max-height:55vh;overflow-y:auto;margin-bottom:14px;">' + rows + '</div>'
+        + '<div style="display:flex;gap:10px;">'
+        + '<button id="cp_cancel" style="flex:1;padding:11px;border:1.5px solid var(--border-color);border-radius:12px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>'
+        + '<button id="cp_save" style="flex:2;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">确认</button>'
+        + '</div>';
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    panel.querySelector('#cp_cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    panel.querySelector('#cp_save').onclick = () => {
+        const checked = panel.querySelector('input[name="cp_radio"]:checked');
+        if (!checked) return;
+        const newCatId = checked.value || null;
+        window.ReplyCategories.setCategory(itemText, newCatId);
+        overlay.remove();
+        renderReplyLibraryRaf();
+        showNotification(newCatId ? ('✓ 已设为「' + newCatId + '」') : '✓ 已移除分类', 'success');
     };
 }
 
@@ -1806,6 +1918,19 @@ function _showBatchAddDialog() {
             </div>` : ''}
         </div>
 
+        ${window.ReplyCategories ? (() => {
+            const cats = window.ReplyCategories.CATEGORIES;
+            let html = '<div style="flex-shrink:0;padding-top:10px;">';
+            html += '<div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">分类（可选）</div>';
+            html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+            html += '<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1.5px solid var(--border-color);background:var(--primary-bg);font-size:12px;cursor:pointer;"><input type="radio" name="ba_category" value="" checked style="accent-color:var(--accent-color);"> 未分类</label>';
+            cats.forEach(function(cat) {
+                html += '<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;border:1.5px solid ' + cat.color + '44;background:' + cat.color + '18;font-size:12px;cursor:pointer;color:' + cat.color + ';font-weight:600;"><input type="radio" name="ba_category" value="' + cat.id + '" style="accent-color:' + cat.color + ';"> ' + cat.label + '</label>';
+            });
+            html += '</div></div>';
+            return html;
+        })() : ''}
+
         <div style="flex-shrink:0;padding-top:14px;display:flex;gap:10px;">
             <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
             <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
@@ -1908,6 +2033,13 @@ function _showBatchAddDialog() {
                 });
             }
         }
+        // Assign category if one was picked
+        if (currentSubTab === 'custom' && window.ReplyCategories && newItems.length > 0) {
+            const catRadio = panel.querySelector('input[name="ba_category"]:checked');
+            if (catRadio && catRadio.value) {
+                newItems.forEach(item => window.ReplyCategories.setCategory(item, catRadio.value));
+            }
+        }
         throttledSaveData();
         overlay.remove();
         renderReplyLibrary();
@@ -1929,6 +2061,7 @@ function initReplyLibraryListeners() {
             _searchVisible = false;
             _searchQuery = '';
             _activeGroupFilter = null;
+            _activeCategoryFilter = null;
             document.querySelectorAll('.sidebar-btn').forEach(b => {
                 b.classList.toggle('active', b.dataset.major === 'reply');
             });
@@ -1963,6 +2096,7 @@ function initReplyLibraryListeners() {
             _searchVisible = false;
             _searchQuery = '';
             _activeGroupFilter = null;
+            _activeCategoryFilter = null;
             currentSubTab = LIBRARY_CONFIG[currentMajorTab].tabs[0].id;
             renderReplyLibrary();
         });

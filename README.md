@@ -91,7 +91,7 @@ python3 -m http.server 8000
 
 ## Privacy
 
-Everything runs on the client. Messages, replies, and settings are stored only in the user's browser and are never sent to a server. Users can export a JSON backup and import it on another device.
+Messages, replies, and settings are stored only in the user's browser and are never sent to a server. Users can export a JSON backup and import it on another device. Visit counts are sent to GoatCounter.
 
 ## Credits
 
